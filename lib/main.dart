@@ -1,82 +1,87 @@
 import 'package:flutter/material.dart';
-import 'pages/edit_page.dart';
-import 'pages/template_page.dart';
-import 'pages/proyek_page.dart';
-import 'pages/saya_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-void main() {
-  runApp(MovixMockApp());
+import 'package:puspajaya_project/pages/agen_page.dart';
+import 'package:puspajaya_project/pages/beranda_page.dart';
+import 'package:puspajaya_project/pages/layanan_bus_akap_page.dart';
+import 'package:puspajaya_project/pages/layanan_bus_pariwisata_page.dart' hide LayananBusPariwisataPage;
+import 'package:puspajaya_project/pages/panduan_page.dart';
+import 'package:puspajaya_project/pages/tentangkami_page.dart';
+
+// ==== FIREBASE CONFIG ====
+import 'firebase_options.dart';
+
+// ==== AUTH SCREEN ====
+import 'auth_screen.dart';
+
+// ==== NAVBAR + HALAMAN PUSPA JAYA ====
+
+import 'pages/beranda_page.dart';
+import 'widgets/navbar.dart';
+import 'pages/tentangkami_page.dart';
+import 'pages/layanan_bus_akap_page.dart';
+import 'pages/layanan_bus_pariwisata_page.dart';
+import 'pages/agen_page.dart';
+import 'pages/panduan_page.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(const MyApp());
 }
 
-class MovixMockApp extends StatelessWidget {
-  const MovixMockApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Movix Mock',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.white,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: HomeShell(),
+      title: "Puspa Jaya Transport",
+
+      home: const AuthWrapper(),
+
+      // === ROUTES ===
+      routes: {
+        '/beranda': (context) => const HomePage(),
+        '/tentang': (context) => const TentangKamiPage(),
+        '/akap': (context) => const LayananBusAKAPPage(),
+        '/pariwisata': (context) => const LayananBusPariwisataPage(),
+        '/agen': (context) => const AgenPage(),
+        '/panduan': (context) => const PanduanPage(),
+      },
     );
   }
 }
 
-class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
-
-  @override
-  // ignore: library_private_types_in_public_api
-  _HomeShellState createState() => _HomeShellState();
-}
-
-class _HomeShellState extends State<HomeShell> {
-  int _currentIndex = 0;
-
-  final List<Widget> _pages = [
-    EditPage(),
-    TemplatePage(),
-    ProyekPage(),
-    SayaPage(),
-  ];
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
-      floatingActionButton: _currentIndex == 2
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Buat proyek baru')),
-                );
-              },
-              icon: Icon(Icons.add),
-              label: Text('Buat'),
-              backgroundColor: Colors.teal,
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        showUnselectedLabels: true,
-        selectedItemColor: Colors.teal[700],
-        unselectedItemColor: Colors.grey[600],
-        onTap: (i) => setState(() => _currentIndex = i),
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.cut), label: 'Edit'),
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'Template'),
-          BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Proyek'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Saya'),
-        ],
-      ),
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Loading saat cek login
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Sudah login → Masuk aplikasi Puspa Jaya (Navbar)
+        if (snapshot.hasData) {
+          return const NavbarController();
+        }
+
+        // Belum login → ke halaman login
+        return const AuthScreen();
+      },
     );
   }
 }
